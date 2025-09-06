@@ -53,7 +53,12 @@ class _CameraScreenState extends State<CameraScreen> {
         orElse: () => _cameras!.first,
       );
 
-      _controller = CameraController(_camera!, ResolutionPreset.high, enableAudio: false);
+      _controller = CameraController(
+        _camera!,
+        ResolutionPreset.high,
+        enableAudio: false,
+        imageFormatGroup: Platform.isAndroid ? ImageFormatGroup.nv21 : ImageFormatGroup.bgra8888,
+      );
       await _controller!.initialize();
       setState(() => _isInitialized = true);
 
@@ -85,8 +90,14 @@ class _CameraScreenState extends State<CameraScreen> {
       return;
     }
 
+    final allBytes = WriteBuffer();
+    for (final plane in image.planes) {
+      allBytes.putUint8List(plane.bytes);
+    }
+    final bytes = allBytes.done().buffer.asUint8List();
+
     final inputImage = InputImage.fromBytes(
-      bytes: image.planes.first.bytes,
+      bytes: bytes,
       metadata: InputImageMetadata(
         size: Size(image.width.toDouble(), image.height.toDouble()),
         rotation: rotation,
