@@ -121,194 +121,6 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   void _handleLivenessCheck(Face face) {
-    final leftEyeOpen = face.leftEyeOpenProbability ?? 1.0;
-    final rightEyeOpen = face.rightEyeOpenProbability ?? 1.0;
-
-    switch (_livenessState) {
-      case LivenessState.idle:
-        _updateStatus("Face detected. Now, please blink.", Colors.green);
-        if (leftEyeOpen > 0.8 && rightEyeOpen > 0.8) {
-          _livenessState = LivenessState.eyesOpen;
-        }
-        break;
-      case LivenessState.eyesOpen:
-        if (leftEyeOpen < 0.2 && rightEyeOpen < 0.2) {
-          _livenessState = LivenessState.eyesClosed;
-        }
-        break;
-      case LivenessState.eyesClosed:
-        if (leftEyeOpen > 0.8 && rightEyeOpen > 0.8) {
-          _updateStatus("Blink detected! Capturing...", Colors.green);
-          _livenessState = LivenessState.complete;
-          _captureAndProcess();
-        }
-        break;
-      case LivenessState.complete:
-        break;
-    }
-  }
-
-  Future<void> _captureAndProcess() async {
-    if (_isProcessing) return;
-    setState(() => _isProcessing = true);
-    await _controller?.stopImageStream();
-
-    try {
-      final image = await _controller!.takePicture();
-      String embedding = await FaceRecognitionService.generateFaceEmbedding(image);
-
-      if (widget.isRegistration) {
-        await _registerFace(embedding);
-      } else {
-        await _verifyFaceForAttendance(image, embedding);
-      }
-    } catch (e) {
-      _updateStatus(e.toString().replaceAll('Exception: ', ''), Colors.red);
-      setState(() => _isProcessing = false);
-      if (_controller != null) _controller!.startImageStream(_processCameraImage);
-    }
-  }
-
-  // ... (rest of the helper methods _registerFace, _verifyFaceForAttendance remain similar)
-  Future<void> _registerFace(String embedding) async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    bool success = await authProvider.updateFaceEmbedding(embedding);
-
-    if (success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Face registered successfully!'), backgroundColor: Colors.green));
-      Navigator.of(context).pop(true);
-    } else {
-      _updateStatus('Face registration failed', Colors.red);
-      setState(() => _isProcessing = false);
-    }
-  }
-
-  Future<void> _verifyFaceForAttendance(XFile image, String embedding) async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final attendanceProvider = Provider.of<AttendanceProvider>(context, listen: false);
-
-    if (authProvider.userModel?.faceEmbedding.isEmpty ?? true) {
-      _updateStatus('Face not registered. Please register first.', Colors.red);
-      setState(() => _isProcessing = false);
-      return;
-    }
-
-    bool isSamePerson = FaceRecognitionService.isSamePerson(authProvider.userModel!.faceEmbedding, embedding);
-    if (!isSamePerson) {
-      _updateStatus('Face verification failed. Try again.', Colors.red);
-      setState(() => _isProcessing = false);
-      return;
-    }
-
-    bool success = await attendanceProvider.checkIn(
-      userId: authProvider.user!.uid,
-      userName: authProvider.userModel!.name,
-      faceImage: File(image.path),
-    );
-
-    if (success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Attendance recorded successfully!'), backgroundColor: Colors.green));
-      Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const HomeScreen()), (route) => false);
-    } else {
-      _updateStatus('Attendance recording failed', Colors.red);
-      setState(() => _isProcessing = false);
-    }
-  }
-
-  void _updateStatus(String message, Color color) {
-    if (mounted) setState(() {
-      _statusMessage = message;
-      _statusColor = color;
-    });
-  }
-
-  @override
-  void dispose() {
-    _controller?.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(widget.isRegistration ? 'Register Face' : 'Face Verification')),
-      body: Column(
-        children: [
-          Expanded(
-            flex: 5,
-            child: _buildCameraPreview(),
-          ),
-          Expanded(
-            flex: 2,
-            child: _buildControls(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCameraPreview() {
-    if (!_isInitialized) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    return Padding(
-      padding: const EdgeInsets.all(20.0),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            CameraPreview(_controller!),
-            if (_detectedFace != null)
-              CustomPaint(painter: FacePainter(_controller!, _detectedFace!)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildControls() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            child: Text(
-              _statusMessage,
-              key: ValueKey<String>(_statusMessage),
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: _statusColor,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          if (_isProcessing) ...[
-            const SizedBox(height: 24),
-            const Center(child: CircularProgressIndicator()),
-          ]
-        ],
-      ),
-    );
-  }
-}
-
-class FacePainter extends CustomPainter {
-  final CameraController controller;
-  final Face face;
-
-  FacePainter(this.controller, this.face);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final Paint paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.0
-      ..color = Colors.greenAccent;
-
     // Check if the face is mostly forward-facing before proceeding
     final headEulerAngleY = face.headEulerAngleY;
     if (headEulerAngleY == null || headEulerAngleY.abs() > 15) {
@@ -345,7 +157,9 @@ class FacePainter extends CustomPainter {
   }
 
   Future<void> _captureAndProcess() async {
-    if (_isProcessing) return;
+    if (_isProcessing) {
+      return;
+    }
     setState(() => _isProcessing = true);
     await _controller?.stopImageStream();
 
@@ -427,10 +241,12 @@ class FacePainter extends CustomPainter {
   }
 
   void _updateStatus(String message, Color color) {
-    if (mounted) setState(() {
-      _statusMessage = message;
-      _statusColor = color;
-    });
+    if (mounted) {
+      setState(() {
+        _statusMessage = message;
+        _statusColor = color;
+      });
+    }
   }
 
   @override
@@ -471,7 +287,7 @@ class FacePainter extends CustomPainter {
           children: [
             CameraPreview(_controller!),
             if (_detectedFace != null)
-              CustomPaint(painter: FacePainter(_controller!, _detectedFace!)),
+              CustomPaint(painter: FacePainter(controller: _controller!, face: _detectedFace!)),
           ],
         ),
       ),
@@ -511,7 +327,7 @@ class FacePainter extends CustomPainter {
   final CameraController controller;
   final Face face;
 
-  FacePainter(this.controller, this.face);
+  FacePainter({required this.controller, required this.face});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -533,23 +349,22 @@ class FacePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+  bool shouldRepaint(covariant CustomPainter oldDelegate) {
+    // This is a simplified version. A more robust implementation would compare
+    // the old and new face data.
+    return true;
+  }
 
   Rect _scaleRect({required Rect rect, required Size imageSize, required Size widgetSize}) {
     final double scaleX = widgetSize.width / imageSize.width;
     final double scaleY = widgetSize.height / imageSize.height;
 
-    final double scaledLeft = rect.left * scaleX;
-    final double scaledTop = rect.top * scaleY;
-    final double scaledRight = rect.right * scaleX;
-    final double scaledBottom = rect.bottom * scaleY;
-
     // For front camera, the image is mirrored, so we need to adjust the horizontal coordinates
     return Rect.fromLTRB(
-      widgetSize.width - scaledRight,
-      scaledTop,
-      widgetSize.width - scaledLeft,
-      scaledBottom,
+      widgetSize.width - (rect.left * scaleX),
+      rect.top * scaleY,
+      widgetSize.width - (rect.right * scaleX),
+      rect.bottom * scaleY,
     );
   }
 }
