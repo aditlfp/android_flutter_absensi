@@ -1,0 +1,39 @@
+name: absensi_next
+description: "A new Flutter project."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # Untuk mengakses kamera perangkat
+  camera: ^0.10.5+9 # Sebaiknya gunakan versi terbaru yang stabil
+
+  # Untuk deteksi wajah dari Google ML Kit
+  google_mlkit_face_detection: ^0.8.0
+
+  # Untuk state management
+  provider: ^6.1.1
+
+  # Untuk format tanggal dan waktu
+  intl: ^0.18.1
+
+  # Untuk menangani izin (kamera, lokasi, dll.)
+  permission_handler: ^11.0.1
+
+  # Untuk menggunakan font kustom (saya menggunakan Poppins)
+  google_fonts: ^6.1.0
+
+  # Icon-icon standar
+  cupertino_icons: ^1.0.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
+
+flutter:
+  uses-material-design: true
