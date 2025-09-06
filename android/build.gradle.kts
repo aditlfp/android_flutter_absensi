@@ -14,10 +14,10 @@ allprojects {
 }
 
 val newBuildDir = rootProject.layout.buildDirectory.dir("../../build").get()
-rootProject.buildDir = "../build"
+rootProject.buildDir = file("../build")
 
 subprojects {
-    project.buildDir = "${rootProject.buildDir}/${project.name}"
+    project.buildDir = file("${rootProject.buildDir}/${project.name}")
     val newSubprojectBuildDir = newBuildDir.dir(project.name)
     project.layout.buildDirectory.value(newSubprojectBuildDir)
 }
