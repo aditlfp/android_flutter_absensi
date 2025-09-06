@@ -3,7 +3,7 @@ import org.gradle.api.file.Directory
 
 plugins {
     id("com.android.application") apply false
-    id("org.jetbrains.kotlin.android") version "1.8.22" apply false
+    id("org.jetbrains.kotlin.android") version "2.1.0" apply false
 }
 
 allprojects {

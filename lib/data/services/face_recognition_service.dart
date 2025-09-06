@@ -84,7 +84,12 @@ class FaceRecognitionService {
         norm2 += features2[i] * features2[i];
       }
 
-      return dotProduct / (sqrt(norm1) * sqrt(norm2));
+      final denominator = sqrt(norm1) * sqrt(norm2);
+      if (denominator == 0) {
+        return 0.0;
+      }
+
+      return dotProduct / denominator;
     } catch (e) {
       return 0.0;
     }
