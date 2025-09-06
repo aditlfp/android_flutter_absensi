@@ -361,9 +361,9 @@ class FacePainter extends CustomPainter {
 
     // For front camera, the image is mirrored, so we need to adjust the horizontal coordinates
     return Rect.fromLTRB(
-      widgetSize.width - (rect.left * scaleX),
-      rect.top * scaleY,
       widgetSize.width - (rect.right * scaleX),
+      rect.top * scaleY,
+      widgetSize.width - (rect.left * scaleX),
       rect.bottom * scaleY,
     );
   }
